@@ -1,0 +1,71 @@
+# ---------------------------------------------
+# Anchors for Common Configurations
+# ---------------------------------------------
+x-common:
+  common_services: &common_services
+    restart: always
+    networks:
+      - monitoring
+
+  cadvisor_healthcheck: &cadvisor_healthcheck
+    test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/metrics"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+  node_exporter_healthcheck: &node_exporter_healthcheck
+    test: ["CMD", "wget", "-q", "--spider", "http://localhost:9100/metrics"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+# ------------------------------------------------------
+# Setup Agents Monitoring Stack on other DRIVE servers 
+# ------------------------------------------------------
+services:
+  cadvisor:
+    <<: *common_services
+    image: ${CADVISOR_IMAGE}
+    container_name: ${CADVISOR_CONTAINER_NAME}
+    hostname: ${CADVISOR_CONTAINER_NAME}
+    privileged: true
+    expose:
+      - 8080
+    command:
+      - '-housekeeping_interval=15s'
+      - '-docker_only=true'
+      - '-store_container_labels=false'
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+      - /etc/machine-id:/etc/machine-id:ro
+    healthcheck: *cadvisor_healthcheck
+
+  node-exporter:
+    <<: *common_services
+    image: ${NODE_EXPORTER_IMAGE}
+    container_name: ${NODE_EXPORTER_CONTAINER_NAME}
+    hostname: ${NODE_EXPORTER_CONTAINER_NAME}
+    expose:
+      - 9100
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host
+      - --collector.filesystem.ignored-mount-points
+      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+    volumes:
+    - /proc:/host/proc:ro
+    - /sys:/host/sys:ro
+    - /var/lib/docker:/var/lib/docker:ro
+    healthcheck: *node_exporter_healthcheck
+
+networks:
+  monitoring:
+    name: monitoring
+    driver: bridge
