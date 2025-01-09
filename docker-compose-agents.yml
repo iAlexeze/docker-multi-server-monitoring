@@ -7,6 +7,18 @@ x-common:
     networks:
       - monitoring
 
+  prometheus_healthcheck: &prometheus_healthcheck
+    test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+  grafana_healthcheck: &grafana_healthcheck
+    test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
   cadvisor_healthcheck: &cadvisor_healthcheck
     test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/metrics"]
     interval: 30s
@@ -29,8 +41,8 @@ services:
     container_name: ${CADVISOR_CONTAINER_NAME}
     hostname: ${CADVISOR_CONTAINER_NAME}
     privileged: true
-    expose:
-      - 8080
+    ports:
+      - 5002:8080
     command:
       - '-housekeeping_interval=15s'
       - '-docker_only=true'
@@ -51,8 +63,8 @@ services:
     image: ${NODE_EXPORTER_IMAGE}
     container_name: ${NODE_EXPORTER_CONTAINER_NAME}
     hostname: ${NODE_EXPORTER_CONTAINER_NAME}
-    expose:
-      - 9100
+    ports:
+      - 5003:9100
     command:
       - --path.procfs=/host/proc
       - --path.sysfs=/host/sys
@@ -69,3 +81,4 @@ networks:
   monitoring:
     name: monitoring
     driver: bridge
+
