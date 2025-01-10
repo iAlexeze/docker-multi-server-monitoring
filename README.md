@@ -57,7 +57,7 @@ A log aggregation system that stores and manages logs collected by Promtail. Lok
 #### **Promtail**
 A log shipping agent that forwards logs to Loki. It is deployed on both the main server and agent servers.
 
-### Deployment Instructions (Updated)
+### Deployment Instructions
 
 #### 1. Setup on the Main Server (STG01)
 
