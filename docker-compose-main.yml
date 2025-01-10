@@ -1,45 +1,40 @@
 # ---------------------------------------------
 # Anchors for Common Configurations
 # ---------------------------------------------
-x-common:
-  common_services: &common_services
-    restart: always
-    networks:
-      - monitoring
-
-  prometheus_healthcheck: &prometheus_healthcheck
-    test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
-    interval: 30s
-    timeout: 10s
+x-drive-common:
+  &drive-common
+  restart: always
+  networks:
+    - drive-monitoring
+  healthcheck:
+    &uniform-frequency
+    interval: 10s
+    timeout: 5s
     retries: 3
-
-  grafana_healthcheck: &grafana_healthcheck
-    test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-
-  cadvisor_healthcheck: &cadvisor_healthcheck
-    test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/metrics"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-
-  node_exporter_healthcheck: &node_exporter_healthcheck
-    test: ["CMD", "wget", "-q", "--spider", "http://localhost:9100/metrics"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-
-# ---------------------------------------------
-# Setup Main Monitoring Stack on STG01 
-# ---------------------------------------------
+  
+x-drive-logging:
+  &drive-logging
+  driver: json-file
+  options:
+    tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}" 
+  
+x-lables:
+  labels:
+     &drive-labels
+    com.project.name: "PROJCET DRIVE"
+    com.drive.description: "DRIVE application"
+    com.drive.supported_os: "ubuntu, debian"
+    com.drive.deployment: "docker podman"
+    
+#-----------------------------------------------------------------------------------------------
+#                                      DRIVE MONITORING
+#-----------------------------------------------------------------------------------------------
 services:
-  prometheus:
-    <<: *common_services
+  monitoring-prometheus:
+    <<: *drive-common
     image: ${PROMETHEUS_IMAGE}
-    container_name: ${PROMETHEUS_CONTAINER_NAME}
-    hostname: ${PROMETHEUS_CONTAINER_NAME}
+    container_name: monitoring-prometheus
+    hostname: monitoring-prometheus
     user: "nobody"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -51,42 +46,54 @@ services:
       - 9090
     volumes:
       # /!\ To be modified depending on your needs /!\
-      - prometheus-storage:/prometheus
-      - ./prometheus:/etc/prometheus/
+      - prometheus_data:/prometheus
+      - ./monitoring/prometheus:/etc/prometheus/
     depends_on:
-      cadvisor:
+      monitoring-cadvisor:
         condition: service_healthy
-      node-exporter:
+      monitoring-node-exporter:
         condition: service_healthy
     links:
-      - cadvisor:cadvisor
-      - node-exporter:node-exporter
-    healthcheck: *prometheus_healthcheck
+      - monitoring-cadvisor:monitoring-cadvisor
+      - monitoring-node-exporter:monitoring-node-exporter
+    healthcheck: 
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      <<: *uniform-frequency
+    labels:
+      <<: *drive-labels
+    logging:
+      <<: *drive-logging
 
-  grafana:
-    <<: *common_services
+  monitoring-grafana:
+    <<: *drive-common
     image: ${GRAFANA_IMAGE}
-    container_name: ${GRAFANA_CONTAINER_NAME}
-    hostname: ${GRAFANA_CONTAINER_NAME}
+    container_name: monitoring-grafana
+    hostname: monitoring-grafana
     user: "472"
     ports:
-      - "5001:3000"
+      - "5002:3000"
     env_file:
-      - ./grafana/.env
+      - ./monitoring/grafana/grafana.env
     volumes:
       # /!\ To be modified depending on your needs /!\
-      - grafana-storage:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
     depends_on:
-      prometheus:
+      monitoring-prometheus:
         condition: service_healthy
-    healthcheck: *grafana_healthcheck
+    healthcheck: 
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      <<: *uniform-frequency
+    labels:
+      <<: *drive-labels
+    logging:
+      <<: *drive-logging
 
-  cadvisor:
-    <<: *common_services
+  monitoring-cadvisor:
+    <<: *drive-common
     image: ${CADVISOR_IMAGE}
-    container_name: ${CADVISOR_CONTAINER_NAME}
-    hostname: ${CADVISOR_CONTAINER_NAME}
+    container_name: monitoring-cadvisor
+    hostname: monitoring-cadvisor
     privileged: true
     expose:
       - 8080
@@ -103,13 +110,19 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
       - /etc/machine-id:/etc/machine-id:ro
-    healthcheck: *cadvisor_healthcheck
+    healthcheck: 
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/metrics"]
+      <<: *uniform-frequency
+    labels:
+      <<: *drive-labels
+    logging:
+      <<: *drive-logging
 
-  node-exporter:
-    <<: *common_services
+  monitoring-node-exporter:
+    <<: *drive-common
     image: ${NODE_EXPORTER_IMAGE}
-    container_name: ${NODE_EXPORTER_CONTAINER_NAME}
-    hostname: ${NODE_EXPORTER_CONTAINER_NAME}
+    container_name: monitoring-node-exporter
+    hostname: monitoring-node-exporter
     expose:
       - 9100
     command:
@@ -122,16 +135,57 @@ services:
     - /proc:/host/proc:ro
     - /sys:/host/sys:ro
     - /var/lib/docker:/var/lib/docker:ro
-    healthcheck: *node_exporter_healthcheck
+    healthcheck: 
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9100/metrics"]
+      <<: *uniform-frequency
+    logging:
+      <<: *drive-logging
+
+#-----------------------------------------------------------------------------------------------
+#                                      DRIVE LOGGING
+#-----------------------------------------------------------------------------------------------
+  logging-loki:
+    <<: *drive-common
+    image: ${LOKI_IMAGE}
+    container_name: logging-loki
+    ports:
+      - "5002:3100"             # To enable promtail access from other servers
+    volumes:
+      - ./logging/loki:/etc/loki/
+    command: -config.file=/etc/loki/loki-config.yaml
+    healthcheck: 
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3100/ready"]
+      <<: *uniform-frequency
+    logging:
+      <<: *drive-logging
+
+  logging-promtail:
+    <<: *drive-common
+    image: ${PROMTAIL_IMAGE}
+    container_name: logging-promtail
+    volumes:
+    - /var/log:/var/log:ro
+    - /var/lib/docker/containers:/host/containers:ro
+    - ./logging/promtail/master-server:/etc/promtail
+    command: -config.file=/etc/promtail/promtail-config.yml
+    depends_on:
+      logging-loki:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "ls", "/var/log"]
+      <<: *uniform-frequency
+    labels:
+      <<: *drive-labels
+    logging:
+      <<: *drive-logging
 
 volumes:
-  grafana-storage:
-    name: grafana-storage
-  prometheus-storage:
-    name: prometheus-storage
-
+  grafana_data:
+    name: grafana_data
+  prometheus_data:
+    name: prometheus_data
+  
 networks:
-  monitoring:
-    name: monitoring
+  drive-monitoring:
+    name: drive-monitoring
     driver: bridge
-

@@ -1,4 +1,4 @@
-# my global config
+# DRIVE global config
 global:
   scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
@@ -30,12 +30,12 @@ scrape_configs:
   - job_name: 'master-cadvisor'
     scrape_interval: 5s
     static_configs:
-      - targets: ['cadvisor:8080']        # cAdvisor on STG01
+      - targets: ['monitoring-cadvisor:8080']        # cAdvisor on STG01
 
   - job_name: 'master-node-exporter'
     scrape_interval: 5s
     static_configs:
-      - targets: ['node-exporter:9100']   # Node Exporter on STG01
+      - targets: ['monitoring-node-exporter:9100']   # Node Exporter on STG01
   
   - job_name: 'agents-cadvisor'
     scrape_interval: 5s

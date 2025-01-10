@@ -1,48 +1,43 @@
 # ---------------------------------------------
 # Anchors for Common Configurations
 # ---------------------------------------------
-x-common:
-  common_services: &common_services
-    restart: always
-    networks:
-      - monitoring
-
-  prometheus_healthcheck: &prometheus_healthcheck
-    test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
-    interval: 30s
-    timeout: 10s
+x-drive-common:
+  &drive-common
+  restart: always
+  networks:
+    - drive-monitoring
+  healthcheck:
+    &uniform-frequency
+    interval: 10s
+    timeout: 5s
     retries: 3
-
-  grafana_healthcheck: &grafana_healthcheck
-    test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-
-  cadvisor_healthcheck: &cadvisor_healthcheck
-    test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/metrics"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-
-  node_exporter_healthcheck: &node_exporter_healthcheck
-    test: ["CMD", "wget", "-q", "--spider", "http://localhost:9100/metrics"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
+  
+x-drive-logging:
+  &drive-logging
+  driver: json-file
+  options:
+    tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}" 
+  
+x-lables:
+  labels:
+     &drive-labels
+    com.project.name: "PROJCET DRIVE"
+    com.drive.description: "DRIVE application"
+    com.drive.supported_os: "ubuntu, debian"
+    com.drive.deployment: "docker"
 
 # ------------------------------------------------------
 # Setup Agents Monitoring Stack on other DRIVE servers 
 # ------------------------------------------------------
 services:
-  cadvisor:
-    <<: *common_services
+  monitoring-cadvisor:
+    <<: *drive-common
     image: ${CADVISOR_IMAGE}
-    container_name: ${CADVISOR_CONTAINER_NAME}
-    hostname: ${CADVISOR_CONTAINER_NAME}
+    container_name: monitoring-cadvisor
+    hostname: monitoring-cadvisor
     privileged: true
-    ports:
-      - 5002:8080
+    expose:
+      - 8080
     command:
       - '-housekeeping_interval=15s'
       - '-docker_only=true'
@@ -56,15 +51,21 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
       - /etc/machine-id:/etc/machine-id:ro
-    healthcheck: *cadvisor_healthcheck
+    healthcheck: 
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/metrics"]
+      <<: *uniform-frequency
+    labels:
+      <<: *drive-labels
+    logging:
+      <<: *drive-logging
 
-  node-exporter:
-    <<: *common_services
+  monitoring-node-exporter:
+    <<: *drive-common
     image: ${NODE_EXPORTER_IMAGE}
-    container_name: ${NODE_EXPORTER_CONTAINER_NAME}
-    hostname: ${NODE_EXPORTER_CONTAINER_NAME}
-    ports:
-      - 5003:9100
+    container_name: monitoring-node-exporter
+    hostname: monitoring-node-exporter
+    expose:
+      - 9100
     command:
       - --path.procfs=/host/proc
       - --path.sysfs=/host/sys
@@ -75,10 +76,42 @@ services:
     - /proc:/host/proc:ro
     - /sys:/host/sys:ro
     - /var/lib/docker:/var/lib/docker:ro
-    healthcheck: *node_exporter_healthcheck
+    healthcheck: 
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9100/metrics"]
+      <<: *uniform-frequency
+    logging:
+      <<: *drive-logging
 
+#-----------------------------------------------------------------------------------------------
+#                                      DRIVE LOGGING
+#-----------------------------------------------------------------------------------------------
+  logging-promtail:
+    <<: *drive-common
+    image: ${PROMTAIL_IMAGE}
+    container_name: logging-promtail
+    volumes:
+    - /var/log:/var/log:ro
+    - /var/lib/docker/containers:/host/containers:ro
+    - ./logging/promtail/agents-server:/etc/promtail
+    command: -config.file=/etc/promtail/promtail-config.yml
+    depends_on:
+      logging-loki:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "ls", "/var/log"]
+      <<: *uniform-frequency
+    labels:
+      <<: *drive-labels
+    logging:
+      <<: *drive-logging
+
+volumes:
+  grafana_data:
+    name: grafana_data
+  prometheus_data:
+    name: prometheus_data
+  
 networks:
-  monitoring:
-    name: monitoring
+  drive-monitoring:
+    name: drive-monitoring
     driver: bridge
-
