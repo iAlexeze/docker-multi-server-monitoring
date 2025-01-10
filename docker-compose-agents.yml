@@ -5,7 +5,7 @@ x-drive-common:
   &drive-common
   restart: always
   networks:
-    - drive-monitoring
+    - drive-agent-monitoring
   healthcheck:
     &uniform-frequency
     interval: 10s
@@ -30,11 +30,11 @@ x-lables:
 # Setup Agents Monitoring Stack on other DRIVE servers 
 # ------------------------------------------------------
 services:
-  monitoring-cadvisor:
+  agent-monitoring-cadvisor:
     <<: *drive-common
     image: ${CADVISOR_IMAGE}
-    container_name: monitoring-cadvisor
-    hostname: monitoring-cadvisor
+    container_name: agent-monitoring-cadvisor
+    hostname: agent-monitoring-cadvisor
     privileged: true
     ports:
       - 5003:8080
@@ -59,11 +59,11 @@ services:
     logging:
       <<: *drive-logging
 
-  monitoring-node-exporter:
+  agent-monitoring-node-exporter:
     <<: *drive-common
     image: ${NODE_EXPORTER_IMAGE}
-    container_name: monitoring-node-exporter
-    hostname: monitoring-node-exporter
+    container_name: agent-monitoring-node-exporter
+    hostname: agent-monitoring-node-exporter
     ports:
       - 5004:9100
     command:
@@ -85,18 +85,15 @@ services:
 #-----------------------------------------------------------------------------------------------
 #                                      DRIVE LOGGING
 #-----------------------------------------------------------------------------------------------
-  logging-promtail:
+  agent-logging-promtail:
     <<: *drive-common
     image: ${PROMTAIL_IMAGE}
-    container_name: logging-promtail
+    container_name: agent-logging-promtail
     volumes:
     - /var/log:/var/log:ro
     - /var/lib/docker/containers:/host/containers:ro
     - ./logging/promtail/agents-server:/etc/promtail
     command: -config.file=/etc/promtail/promtail-config.yml
-    depends_on:
-      logging-loki:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "ls", "/var/log"]
       <<: *uniform-frequency
@@ -105,13 +102,9 @@ services:
     logging:
       <<: *drive-logging
 
-volumes:
-  grafana_data:
-    name: grafana_data
-  prometheus_data:
-    name: prometheus_data
-  
+ 
 networks:
-  drive-monitoring:
-    name: drive-monitoring
+  drive-agent-monitoring:
+    name: drive-agent-monitoring
     driver: bridge
+
