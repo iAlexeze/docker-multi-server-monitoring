@@ -71,7 +71,7 @@ services:
     hostname: monitoring-grafana
     user: "472"
     ports:
-      - "5002:3000"
+      - "5001:3000"
     env_file:
       - ./monitoring/grafana/grafana.env
     volumes:
