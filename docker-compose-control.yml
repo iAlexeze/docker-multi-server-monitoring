@@ -166,7 +166,7 @@ services:
     volumes:
     - /var/log:/var/log:ro
     - /var/lib/docker/containers:/host/containers:ro
-    - ./logging/promtail/master-server:/etc/promtail
+    - ./logging/promtail/control-server:/etc/promtail
     command: -config.file=/etc/promtail/promtail-config.yml
     depends_on:
       logging-loki:

@@ -61,13 +61,13 @@ A log shipping agent that forwards logs to Loki. It is deployed on both the cont
 
 #### 1. Setup on the Control Server (STG01)
 
-1. Clone the repository configurations to the control server:
+1. Clone the repository configurations to each remote server:
    ```bash
-   git clone <https://repo-url>
+   git clone https://github.com/iAlexeze/docker-multi-server-monitoring.git logging-and-monitoring
    ```
 2. Navigate to the project directory:
    ```bash
-   cd <project-directory>
+   cd logging-and-monitoring
    ```
 3. **Update Prometheus Configuration**:  
    Before starting the services, update `prometheus/prometheus.yml` with the appropriate IPs of the agent servers. Example:
@@ -102,11 +102,11 @@ A log shipping agent that forwards logs to Loki. It is deployed on both the cont
 
 1. Clone the repository configurations to each remote server:
    ```bash
-   git clone <https://repo-url>
+   git clone https://github.com/iAlexeze/docker-multi-server-monitoring.git logging-and-monitoring
    ```
 2. Navigate to the project directory:
    ```bash
-   cd <project-directory>
+   cd logging-and-monitoring
    ```
 3. **Update Promtail Configuration**:  
    Before starting the services, edit the `promtail-config.yml` file in the agents' directory and set the `clients` field to the control server's IP address. Example:
@@ -150,7 +150,7 @@ To streamline the deployment process on remote servers, we use **Ansible** for a
      tasks:
        - name: Clone the repository
          git:
-           repo: '<https://repo-url>'
+           repo: 'https://github.com/iAlexeze/docker-multi-server-monitoring.git'
            dest: '/path/to/deployment'
            update: yes
 
