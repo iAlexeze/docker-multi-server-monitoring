@@ -92,11 +92,17 @@ A log shipping agent that forwards logs to Loki. It is deployed on both the cont
              - 'DEV02_IP:5004'   # Node Exporter on DEV02
              - 'DEV03_IP:5004'   # Node Exporter on DEV03
    ```
-4. Start the stack:
+4. **Port Management**:
+   Ensure that control server can accept traffic from the following ports:
+   ```yaml
+      - 5001: for `Grafana UI`
+      - 5002: for `Loki`
+   ```
+5. Start the stack:
    ```bash
    docker-compose -f docker-compose-control.yml up -d
    ```
-5. Access Grafana at `http://<STG01_IP>:5001`.
+6. Access Grafana at `http://<STG01_IP>:5001`.
 
 #### 2. Setup on Remote Servers (e.g., STG02, DEV01, DEV02, DEV03)
 
@@ -115,7 +121,13 @@ A log shipping agent that forwards logs to Loki. It is deployed on both the cont
    clients:
      - url: http://<control_server_ip>:5002/loki/api/v1/push
    ```
-4. Start the agents:
+4. **Port Management**:
+   Ensure that remote servers can accept traffic from the following ports:
+   ```yaml
+      - 5003: for `cAdvisor`
+      - 5004: for `Node-Exporter`
+   ```
+5. Start the agents:
    ```bash
    docker-compose -f docker-compose-agents.yml up -d
    ```
