@@ -41,16 +41,16 @@ scrape_configs:
     scrape_interval: 5s
     static_configs:
       - targets:
-          - 'STG02:8080'   # cAdvisor on STG02
-          - 'DEV01:8080'   # cAdvisor on DEV01
-          - 'DEV02:8080'   # cAdvisor on DEV02
-          - 'DEV03:8080'   # cAdvisor on DEV03
+          - 'STG02_IP:5003'   # cAdvisor on STG02
+          - 'DEV01_IP:5003'   # cAdvisor on DEV01
+          - 'DEV02_IP:5003'   # cAdvisor on DEV02
+          - 'DEV03_IP:5003'   # cAdvisor on DEV03
 
   - job_name: 'agents-node-exporter'
     scrape_interval: 5s
     static_configs:
       - targets:
-          - 'STG02:9100'   # Node Exporter on STG02
-          - 'DEV01:9100'   # Node Exporter on DEV01
-          - 'DEV02:9100'   # Node Exporter on DEV02
-          - 'DEV03:9100'   # Node Exporter on DEV03
+          - 'STG02_IP:5004'   # Node Exporter on STG02
+          - 'DEV01_IP:5004'   # Node Exporter on DEV01
+          - 'DEV02_IP:5004'   # Node Exporter on DEV02
+          - 'DEV03_IP:5004'   # Node Exporter on DEV03

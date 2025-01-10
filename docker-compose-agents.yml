@@ -36,8 +36,8 @@ services:
     container_name: monitoring-cadvisor
     hostname: monitoring-cadvisor
     privileged: true
-    expose:
-      - 8080
+    ports:
+      - 5003:8080
     command:
       - '-housekeeping_interval=15s'
       - '-docker_only=true'
@@ -64,8 +64,8 @@ services:
     image: ${NODE_EXPORTER_IMAGE}
     container_name: monitoring-node-exporter
     hostname: monitoring-node-exporter
-    expose:
-      - 9100
+    ports:
+      - 5004:9100
     command:
       - --path.procfs=/host/proc
       - --path.sysfs=/host/sys

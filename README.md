@@ -9,15 +9,15 @@ This project sets up a monitoring and logging stack using **Prometheus**, **Graf
 ├── LICENSE
 ├── README.md
 ├── docker-compose-agents.yml       # Docker Compose configuration for agent servers
-├── docker-compose-main.yml         # Docker Compose configuration for the main server (STG01)
+├── docker-compose-control.yml         # Docker Compose configuration for the control server (STG01)
 ├── logging
 │   ├── loki
 │   │   └── loki-config.yaml         # Configuration file for Loki
 │   └── promtail
 │       ├── agents-server
 │       │   └── promtail-config.yml  # Promtail configuration for agent servers
-│       └── master-server
-│           └── promtail-config.yml  # Promtail configuration for the main server
+│       └── control-server
+│           └── promtail-config.yml  # Promtail configuration for the control server
 ├── monitoring
 │   ├── grafana
 │   │   ├── grafana.env              # Environment variables for Grafana
@@ -35,18 +35,18 @@ This project sets up a monitoring and logging stack using **Prometheus**, **Graf
 ## Files Overview
 
 ### `logging/loki/loki-config.yaml`
-This file configures **Loki**, a log aggregation system, to store and manage logs collected from Promtail across the main and agent servers. Loki is integrated with Grafana for visualizing logs.
+This file configures **Loki**, a log aggregation system, to store and manage logs collected from Promtail across the control and agent servers. Loki is integrated with Grafana for visualizing logs.
 
 ### `logging/promtail/agents-server/promtail-config.yml`
-This configuration file defines how **Promtail** collects logs from Docker containers and system logs on remote agent servers. Promtail forwards the logs to the Loki server running on the main server.
+This configuration file defines how **Promtail** collects logs from Docker containers and system logs on remote agent servers. Promtail forwards the logs to the Loki server running on the control server.
 
-### `logging/promtail/master-server/promtail-config.yml`
-This configuration file defines how **Promtail** collects logs on the main server and forwards them to the local Loki instance.
+### `logging/promtail/control-server/promtail-config.yml`
+This configuration file defines how **Promtail** collects logs on the control server and forwards them to the local Loki instance.
 
 ### Monitoring and Logging Components
 
 #### **Prometheus**
-Collects metrics from `node-exporter` and `cAdvisor` running on the main and agent servers.
+Collects metrics from `node-exporter` and `cAdvisor` running on the control and agent servers.
 
 #### **Grafana**
 Visualizes metrics from Prometheus and logs from Loki. It provides predefined dashboards for both monitoring and logging.
@@ -55,13 +55,13 @@ Visualizes metrics from Prometheus and logs from Loki. It provides predefined da
 A log aggregation system that stores and manages logs collected by Promtail. Loki integrates with Grafana for querying and visualization.
 
 #### **Promtail**
-A log shipping agent that forwards logs to Loki. It is deployed on both the main server and agent servers.
+A log shipping agent that forwards logs to Loki. It is deployed on both the control server and agent servers.
 
 ### Deployment Instructions
 
-#### 1. Setup on the Main Server (STG01)
+#### 1. Setup on the Control Server (STG01)
 
-1. Clone the repository configurations to the main server:
+1. Clone the repository configurations to the control server:
    ```bash
    git clone <https://repo-url>
    ```
@@ -69,11 +69,37 @@ A log shipping agent that forwards logs to Loki. It is deployed on both the main
    ```bash
    cd <project-directory>
    ```
-3. Start the stack:
-   ```bash
-   docker-compose -f docker-compose-main.yml up -d
+3. **Update Prometheus Configuration**:  
+   Before starting the services, update `prometheus/prometheus.yml` with the appropriate IPs of the agent servers. Example:
+
+   ```yaml
+   scrape_configs:
+     - job_name: 'agents-cadvisor'
+       scrape_interval: 5s
+       static_configs:
+         - targets:
+             - 'STG02_IP:5003'   # cAdvisor on STG02
+             - 'DEV01_IP:5003'   # cAdvisor on DEV01
+             - 'DEV02_IP:5003'   # cAdvisor on DEV02
+             - 'DEV03_IP:5003'   # cAdvisor on DEV03
+
+     - job_name: 'agents-node-exporter'
+       scrape_interval: 5s
+       static_configs:
+         - targets:
+             - 'STG02_IP:5004'   # Node Exporter on STG02
+             - 'DEV01_IP:5004'   # Node Exporter on DEV01
+             - 'DEV02_IP:5004'   # Node Exporter on DEV02
+             - 'DEV03_IP:5004'   # Node Exporter on DEV03
    ```
-4. Access Grafana at `http://<STG01_IP>:5001`.
+4. Start the stack:
+   ```bash
+   docker-compose -f docker-compose-control.yml up -d
+5. Start the stack:
+   ```bash
+   docker-compose -f docker-compose-control.yml up -d
+   ```
+6. Access Grafana at `http://<STG01_IP>:5001`.
 
 #### 2. Setup on Remote Servers (e.g., STG02, DEV01, DEV02, DEV03)
 
@@ -85,7 +111,14 @@ A log shipping agent that forwards logs to Loki. It is deployed on both the main
    ```bash
    cd <project-directory>
    ```
-3. Start the agents:
+3. **Update Promtail Configuration**:  
+   Before starting the services, edit the `promtail-config.yml` file in the agents' directory and set the `clients` field to the control server's IP address. Example:
+
+   ```yaml
+   clients:
+     - url: http://<control_server_ip>:5002/loki/api/v1/push
+   ```
+4. Start the agents:
    ```bash
    docker-compose -f docker-compose-agents.yml up -d
    ```
