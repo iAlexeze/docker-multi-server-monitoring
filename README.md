@@ -94,7 +94,7 @@ A log shipping agent that forwards logs to Loki. It is deployed on both the cont
    ```
 4. **Port Management**:
    
-   Ensure that control server can accept traffic from the following ports:
+   Ensure that the `control server` can accept traffic from the following ports:
    ```yaml
       - 5001: for Grafana UI
       - 5002: for Loki
@@ -124,7 +124,7 @@ A log shipping agent that forwards logs to Loki. It is deployed on both the cont
    ```
 4. **Port Management**:
    
-   Ensure that remote servers can accept traffic from the following ports:
+   Ensure that the `remote servers` can accept traffic from the following ports:
    ```yaml
       - 5003: for cAdvisor
       - 5004: for Node-Exporter
