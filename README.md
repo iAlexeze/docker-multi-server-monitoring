@@ -95,11 +95,8 @@ A log shipping agent that forwards logs to Loki. It is deployed on both the cont
 4. Start the stack:
    ```bash
    docker-compose -f docker-compose-control.yml up -d
-5. Start the stack:
-   ```bash
-   docker-compose -f docker-compose-control.yml up -d
    ```
-6. Access Grafana at `http://<STG01_IP>:5001`.
+5. Access Grafana at `http://<STG01_IP>:5001`.
 
 #### 2. Setup on Remote Servers (e.g., STG02, DEV01, DEV02, DEV03)
 
