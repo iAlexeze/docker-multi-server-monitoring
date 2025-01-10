@@ -93,6 +93,7 @@ A log shipping agent that forwards logs to Loki. It is deployed on both the cont
              - 'DEV03_IP:5004'   # Node Exporter on DEV03
    ```
 4. **Port Management**:
+   
    Ensure that control server can accept traffic from the following ports:
    ```yaml
       - 5001: for Grafana UI
@@ -122,6 +123,7 @@ A log shipping agent that forwards logs to Loki. It is deployed on both the cont
      - url: http://<control_server_ip>:5002/loki/api/v1/push
    ```
 4. **Port Management**:
+   
    Ensure that remote servers can accept traffic from the following ports:
    ```yaml
       - 5003: for cAdvisor
